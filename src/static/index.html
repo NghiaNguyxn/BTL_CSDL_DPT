@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hệ thống Lưu trữ và Tìm kiếm Ảnh cá (CBIR) - Nhóm 14</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background-color: #f5f7fa;
+      color: #1f2937;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    /* Header */
+    .header {
+      background: #ffffff;
+      border-bottom: 1px solid #d1d5db;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-title h1 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .header-title p {
+      font-size: 12.5px;
+      color: #4b5563;
+      margin-top: 2px;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+    }
+    .tab-btn {
+      padding: 7px 14px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      color: #374151;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tab-btn:hover {
+      background: #f3f4f6;
+    }
+    .tab-btn.active {
+      background: #1d4ed8;
+      color: #ffffff;
+      border-color: #1d4ed8;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1440px;
+      margin: 16px auto;
+      padding: 0 20px;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Card */
+    .card {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .card-header {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #111827;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sub-label {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 400;
+    }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 10px;
+    }
+    .form-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    select, input[type="file"] {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      background: #ffffff;
+      color: #1f2937;
+    }
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 10px 0;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      color: #374151;
+      cursor: pointer;
+      font-weight: 400;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 9px 12px;
+      background: #1d4ed8;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-link {
+      background: none;
+      border: none;
+      color: #1d4ed8;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Quick Sample Thumbs */
+    .sample-thumbs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .sample-thumb {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 3px;
+      text-align: center;
+      cursor: pointer;
+      background: #f9fafb;
+    }
+    .sample-thumb:hover {
+      border-color: #1d4ed8;
+    }
+    .sample-thumb.selected {
+      border: 2px solid #1d4ed8;
+      background: #eff6ff;
+    }
+    .sample-thumb img {
+      width: 100%;
+      height: 44px;
+      object-fit: contain;
+      background: #000000;
+      border-radius: 2px;
+      display: block;
+    }
+    .sample-thumb span {
+      display: block;
+      font-size: 10.5px;
+      color: #374151;
+      margin-top: 2px;
+      font-family: Consolas, monospace;
+    }
+
+    /* Status bar */
+    .status-bar {
+      padding: 9px 14px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .status-known {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+    }
+    .status-novel {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    /* Query & Top-5 Grid */
+    .results-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 1100px) {
+      .results-layout { grid-template-columns: 1fr; }
+    }
+    .top5-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 900px) {
+      .top5-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .fish-box {
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      padding: 8px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .fish-box.query-box {
+      border: 2px solid #1d4ed8;
+      background: #f8fafc;
+    }
+    .fish-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #e5e7eb;
+      color: #1f2937;
+    }
+    .badge-primary {
+      background: #1d4ed8;
+      color: #ffffff;
+    }
+    .fish-box img {
+      width: 100%;
+      height: 130px;
+      object-fit: contain;
+      background: #000000;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+    }
+    .fish-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #111827;
+      margin-top: 6px;
+    }
+    .fish-meta {
+      font-size: 11.5px;
+      color: #4b5563;
+      margin-top: 2px;
+    }
+    .dist-list {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #f3f4f6;
+      font-size: 11.5px;
+      color: #374151;
+    }
+    .dist-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    /* Intermediate Section */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 960px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+    .section-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      padding: 10px 12px;
+      background: #f9fafb;
+    }
+    .section-box h4 {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+
+    /* 8x8 Binary Grid */
+    .grid-8x8 {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      max-width: 240px;
+      margin: 6px auto;
+      background: #cbd5e1;
+      padding: 2px;
+      border-radius: 4px;
+    }
+    .grid-cell {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-family: Consolas, monospace;
+      background: #ffffff;
+      color: #9ca3af;
+    }
+    .grid-cell.bit-1 {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 700;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: #ffffff;
+    }
+    th, td {
+      padding: 5px 8px;
+      border: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      color: #374151;
+      font-weight: 600;
+    }
+    .mono {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    /* Simple Bar Chart */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 85px;
+      padding: 6px 4px 2px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+    }
+    .bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .bar-fill {
+      width: 100%;
+      background: #2563eb;
+      border-radius: 2px 2px 0 0;
+      min-height: 1px;
+    }
+    .bar-lbl {
+      font-size: 9.5px;
+      color: #6b7280;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>HỆ THỐNG CSDL LƯU TRỮ VÀ TÌM KIẾM ẢNH CÁ DỰA TRÊN NỘI DUNG (CBIR)</h1>
+    <p>Môn học: Hệ Cơ sở dữ liệu Đa phương tiện — GVHD: TS. Nguyễn Đình Hóa — Nhóm 14 (Lớp 04)</p>
+  </div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-search', this)">1. Tìm kiếm ảnh tương đồng (Phần 4 & 5)</button>
+    <button class="tab-btn" onclick="switchTab('tab-db', this)">2. Quản trị CSDL SQLite (Phần 3)</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- TAB 1: TÌM KIẾM CBIR -->
+  <div id="tab-search" class="tab-panel active">
+    <div class="main-grid">
+      <!-- CỘT TRÁI: BẢNG ĐIỀU KHIỂN -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <span>1. Chọn ảnh cá truy vấn</span>
+            <span id="selected-query-badge" class="sub-label mono">rui_0651</span>
+          </div>
+
+          <div class="form-group">
+            <label>Tải ảnh từ máy tính (.jpg, .png):</label>
+            <input type="file" id="file-input" accept="image/*" onchange="onFileSelected(this)" />
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label>
+              <span>Hoặc chọn ảnh mẫu trong CSDL:</span>
+            </label>
+            <select id="species-sample-select" onchange="renderSampleThumbsForSpecies()">
+              <option value="rui">Rui - Cá trôi Ấn Độ (200 ảnh)</option>
+              <option value="katla">Katla - Cá chép Ấn Độ (Mè vinh) (200 ảnh)</option>
+              <option value="koi">Koi - Cá rô đồng (150 ảnh)</option>
+              <option value="telapia">Telapia - Cá rô phi (250 ảnh)</option>
+              <option value="boal">Boal - Cá leo (200 ảnh)</option>
+              <option value="ilish">Ilish - Cá cháy (100 ảnh)</option>
+            </select>
+            <div id="quick-samples-container" class="sample-thumbs"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span>2. Tham số truy vấn</span>
+            <button class="btn-link" onclick="resetDefaultWeights()">Mặc định</button>
+          </div>
+
+          <div class="form-group">
+            <label>Độ đo khoảng cách:</label>
+            <select id="metric-mode" onchange="runSearch()">
+              <option value="hybrid_2level">Độ đo lai 2 tầng (L1 + Z-Score L2)</option>
+              <option value="l1_manhattan">Khoảng cách Manhattan (L1)</option>
+              <option value="l2_euclidean">Khoảng cách Euclidean (L2)</option>
+              <option value="cosine">Khoảng cách Cosine</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Cơ chế lọc ứng viên:</label>
+            <select id="coarse-mode" onchange="runSearch()">
+              <option value="none">Quét toàn bộ 1.100 ảnh trong CSDL</option>
+              <option value="grid64">Lọc thô Lưới nhị phân 8×8 (64-bit)</option>
+              <option value="grid192">Lọc thô Lưới nhị phân 12×16 (192-bit)</option>
+              <option value="ball_tree">Truy vấn nhánh cận Ball-Tree</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label><span>Trọng số Màu sắc (w_color):</span><span id="lbl-wc" class="mono">0.50</span></label>
+            <input type="range" id="slider-wc" min="0" max="1" step="0.05" value="0.50" oninput="updateWeightLabels()" onchange="runSearch()" />
+          </div>
+          <div class="form-group">
+            <label><span>Trọng số Hình dạng (w_shape):</span><span id="lbl-ws" class="mono">0.30</span></label>
+            <input type="range" id="slider-ws" min="0" max="1" step="0.05" value="0.30" oninput="updateWeightLabels()" onchange="runSearch()" />
+          </div>
+          <div class="form-group">
+            <label><span>Trọng số Kết cấu (w_texture):</span><span id="lbl-wt" class="mono">0.20</span></label>
+            <input type="range" id="slider-wt" min="0" max="1" step="0.05" value="0.20" oninput="updateWeightLabels()" onchange="runSearch()" />
+          </div>
+
+          <div class="checkbox-group">
+            <label>
+              <input type="checkbox" id="chk-diversify" checked onchange="runSearch()" />
+              <span>Khử ảnh chụp liên tiếp cùng cá thể trong Top-5</span>
+            </label>
+            <label>
+              <input type="checkbox" id="chk-exclude-self" onchange="runSearch()" />
+              <span>Loại bỏ chính ảnh truy vấn (Leave-One-Out)</span>
+            </label>
+            <label>
+              <input type="checkbox" id="chk-quadratic" onchange="runSearch()" />
+              <span>Dùng ma trận màu chéo bin A (78×78)</span>
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>Giả lập loài cá mới (Ẩn 1 loài khỏi CSDL):</label>
+            <select id="sim-unknown-species" onchange="runSearch()">
+              <option value="">Không ẩn (Đầy đủ 6 loài trong CSDL)</option>
+              <option value="boal">Ẩn loài Boal khỏi CSDL</option>
+              <option value="ilish">Ẩn loài Ilish khỏi CSDL</option>
+              <option value="katla">Ẩn loài Katla khỏi CSDL</option>
+              <option value="koi">Ẩn loài Koi khỏi CSDL</option>
+              <option value="rui">Ẩn loài Rui khỏi CSDL</option>
+              <option value="telapia">Ẩn loài Telapia khỏi CSDL</option>
+            </select>
+          </div>
+
+          <button class="btn-primary" onclick="runSearch()">Tìm kiếm Top-5 ảnh giống nhất</button>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI: KẾT QUẢ TÌM KIẾM & KẾT QUẢ TRUNG GIAN -->
+      <div>
+        <div id="novelty-banner" class="status-bar status-known">
+          <span id="novelty-text">Đang tải dữ liệu...</span>
+          <span id="latency-text" class="mono" style="font-size: 12px;"></span>
+        </div>
+
+        <!-- KHỐI 1: ẢNH ĐẦU VÀO & TOP-5 KẾT QUẢ -->
+        <div class="card">
+          <div class="card-header">
+            <span>Kết quả tìm kiếm: Ảnh đầu vào & 5 ảnh tương đồng nhất</span>
+            <span id="active-weights-badge" class="sub-label mono"></span>
+          </div>
+
+          <div class="results-layout">
+            <!-- Ảnh đầu vào -->
+            <div class="fish-box query-box">
+              <div>
+                <div class="fish-box-header">
+                  <span class="badge badge-primary">ẢNH ĐẦU VÀO</span>
+                  <span class="mono" id="q-angle-text" style="font-size:11px; color:#4b5563;"></span>
+                </div>
+                <img id="query-preview-img" src="" alt="Ảnh truy vấn" />
+                <div class="fish-title" id="q-title-name">-</div>
+                <div class="fish-meta" id="q-meta-summary">-</div>
+              </div>
+              <div class="dist-list mono" id="q-hex-summary" style="font-size:10.5px; word-break:break-all;">-</div>
+            </div>
+
+            <!-- Danh sách 5 ảnh kết quả -->
+            <div id="top5-container" class="top5-grid"></div>
+          </div>
+        </div>
+
+        <!-- KHỐI 2: KẾT QUẢ TRUNG GIAN (YÊU CẦU 4B) -->
+        <div class="card">
+          <div class="card-header">
+            <span>Kết quả trung gian của quá trình truy vấn (Yêu cầu 4b)</span>
+            <span class="sub-label">Vector đặc trưng 421 chiều (12 thành phần) & tính toán khoảng cách</span>
+          </div>
+
+          <div class="two-col">
+            <!-- Cột trái: Lưới 8x8 + Hình thái học S1 & Tamura T3 -->
+            <div class="section-box">
+              <h4>1. Lưới nhị phân hình dạng 8×8 ngưỡng 15% (S5) & Chỉ số hình học (S1, T3)</h4>
+              <div style="display: grid; grid-template-columns: 220px 1fr; gap: 10px; align-items: start;">
+                <div>
+                  <div id="grid-8x8-visual" class="grid-8x8"></div>
+                  <div id="grid-hex-detail" class="mono" style="font-size:11px; text-align:center; color:#374151; margin-top:4px;"></div>
+                </div>
+                <div>
+                  <table id="s1-table">
+                    <thead>
+                      <tr><th>Thuộc tính (S1 / T3)</th><th>Giá trị</th><th>Z-Score</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cột phải: Màu sắc C1, C2 & Biên dạng Lưng-Bụng S2 -->
+            <div class="section-box">
+              <h4>2. Phân bố màu HSV (C1), Mô-men CIE Lab (C2) & Biên dạng Lưng-Bụng (S2)</h4>
+              <div id="c1-summary-text" style="font-size:12px; color:#4b5563; margin-bottom:4px;"></div>
+              <div id="c1-hist-bars" class="bar-chart"></div>
+
+              <div style="margin-top: 8px;">
+                <table id="c2-table">
+                  <thead>
+                    <tr><th>Kênh CIE Lab (C2)</th><th>Trung bình (μ)</th><th>Độ lệch chuẩn (σ)</th><th>Độ lệch (Skew)</th></tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <div style="margin-top: 8px;">
+                <div style="font-size:11.5px; font-weight:600; color:#374151; margin-bottom:3px;">
+                  Biên dạng 16 lát cắt Sống lưng (xanh đậm) & Lườn bụng (xanh nhạt) (S2 - 32 chiều):
+                </div>
+                <div id="s2-profile-bars" class="bar-chart" style="height: 65px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bảng khoảng cách 12 thành phần x Top 5 -->
+          <div class="section-box" style="margin-top: 12px;">
+            <h4>3. Bảng khoảng cách trung gian theo 12 thành phần đặc trưng đối với Top-5 ảnh kết quả</h4>
+            <div style="overflow-x: auto;">
+              <table id="comp-distance-matrix">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: QUẢN TRỊ CSDL SQLITE (PHẦN 3) -->
+  <div id="tab-db" class="tab-panel">
+    <div class="card">
+      <div class="card-header">
+        <span>Quản trị Hệ CSDL Đa phương tiện SQLite (data/fish_multimedia.db — 6 bảng)</span>
+        <span id="db-summary-line" class="sub-label mono"></span>
+      </div>
+
+      <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+        <div>
+          <label style="font-size:12.5px; font-weight:600; margin-right:6px;">Chọn bảng:</label>
+          <select id="db-table-select" onchange="loadDbTable()" style="width:270px; display:inline-block;">
+            <option value="Fish_Metadata">1. Fish_Metadata (1.100 bản ghi)</option>
+            <option value="Shape_Binary_Index">2. Shape_Binary_Index (1.100 bản ghi)</option>
+            <option value="Fish_Feature_Vector">3. Fish_Feature_Vector (1.100 bản ghi BLOB)</option>
+            <option value="Feature_Schema">4. Feature_Schema (421 chiều đặc trưng)</option>
+            <option value="Normalization_Stats">5. Normalization_Stats (421 dòng thống kê)</option>
+            <option value="CBIR_System_Config">6. CBIR_System_Config (5 dòng cấu hình)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12.5px; font-weight:600; margin-right:6px;">Lọc theo loài:</label>
+          <select id="db-species-select" onchange="loadDbTable()" style="width:170px; display:inline-block;">
+            <option value="">Tất cả 6 loài</option>
+            <option value="boal">boal (Cá leo)</option>
+            <option value="ilish">ilish (Cá cháy)</option>
+            <option value="katla">katla (Cá chép Ấn Độ - Mè vinh)</option>
+            <option value="koi">koi (Cá rô đồng)</option>
+            <option value="rui">rui (Cá trôi Ấn Độ)</option>
+            <option value="telapia">telapia (Cá rô phi)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto; max-height:500px; border:1px solid #e5e7eb;">
+        <table id="db-preview-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentSampleId = "rui_0651";
+  let uploadedFile = null;
+  let dbInfoCache = null;
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById(tabId).classList.add("active");
+    btn.classList.add("active");
+  }
+
+  function updateWeightLabels() {
+    document.getElementById("lbl-wc").textContent = parseFloat(document.getElementById("slider-wc").value).toFixed(2);
+    document.getElementById("lbl-ws").textContent = parseFloat(document.getElementById("slider-ws").value).toFixed(2);
+    document.getElementById("lbl-wt").textContent = parseFloat(document.getElementById("slider-wt").value).toFixed(2);
+  }
+
+  function resetDefaultWeights() {
+    const dw = (dbInfoCache && dbInfoCache.db_summary && dbInfoCache.db_summary.default_weights) || { color: 0.40, shape: 0.50, texture: 0.10 };
+    document.getElementById("slider-wc").value = dw.color;
+    document.getElementById("slider-ws").value = dw.shape;
+    document.getElementById("slider-wt").value = dw.texture;
+    document.getElementById("metric-mode").value = "hybrid_2level";
+    document.getElementById("coarse-mode").value = "none";
+    document.getElementById("chk-quadratic").checked = false;
+    document.getElementById("chk-exclude-self").checked = false;
+    document.getElementById("chk-diversify").checked = true;
+    document.getElementById("sim-unknown-species").value = "";
+    updateWeightLabels();
+    runSearch();
+  }
+
+  function onFileSelected(input) {
+    if (input.files && input.files[0]) {
+      uploadedFile = input.files[0];
+      currentSampleId = "";
+      document.getElementById("selected-query-badge").textContent = uploadedFile.name;
+      document.querySelectorAll(".sample-thumb").forEach(el => el.classList.remove("selected"));
+      runSearch();
+    }
+  }
+
+  function selectSampleImage(imageId, el) {
+    uploadedFile = null;
+    document.getElementById("file-input").value = "";
+    currentSampleId = imageId;
+    document.getElementById("selected-query-badge").textContent = imageId;
+    document.querySelectorAll(".sample-thumb").forEach(item => item.classList.remove("selected"));
+    if (el) el.classList.add("selected");
+    runSearch();
+  }
+
+  function renderSampleThumbsForSpecies() {
+    if (!dbInfoCache) return;
+    const sp = document.getElementById("species-sample-select").value;
+    const items = dbInfoCache.quick_samples[sp] || [];
+    const qsContainer = document.getElementById("quick-samples-container");
+    qsContainer.innerHTML = "";
+    items.forEach(item => {
+      const thumb = document.createElement("div");
+      thumb.className = "sample-thumb" + (item.image_id === currentSampleId ? " selected" : "");
+      thumb.onclick = () => selectSampleImage(item.image_id, thumb);
+      thumb.innerHTML = `
+        <img src="${item.file_path}" alt="${item.image_id}" />
+        <span>${item.image_id}</span>
+      `;
+      qsContainer.appendChild(thumb);
+    });
+  }
+
+  async function initApp() {
+    const res = await fetch("/api/db-info");
+    const data = await res.json();
+    dbInfoCache = data;
+
+    if (data.db_summary && data.db_summary.default_weights) {
+      document.getElementById("slider-wc").value = data.db_summary.default_weights.color;
+      document.getElementById("slider-ws").value = data.db_summary.default_weights.shape;
+      document.getElementById("slider-wt").value = data.db_summary.default_weights.texture;
+      updateWeightLabels();
+    }
+
+    renderSampleThumbsForSpecies();
+
+    const s = data.db_summary;
+    document.getElementById("db-summary-line").textContent =
+      `Dung lượng: ${s.db_size_mb} MB | Tổng số ảnh: ${s.total_images} | Số chiều: ${s.total_dimensions}`;
+
+    loadDbTable();
+    runSearch();
+  }
+
+  async function runSearch() {
+    const formData = new FormData();
+    if (uploadedFile) {
+      formData.append("file", uploadedFile);
+    } else {
+      formData.append("sample_image_id", currentSampleId);
+    }
+    formData.append("top_k", "5");
+    formData.append("metric_mode", document.getElementById("metric-mode").value);
+    formData.append("w_color", document.getElementById("slider-wc").value);
+    formData.append("w_shape", document.getElementById("slider-ws").value);
+    formData.append("w_texture", document.getElementById("slider-wt").value);
+    formData.append("coarse_filter_mode", document.getElementById("coarse-mode").value);
+    formData.append("use_quadratic_color", document.getElementById("chk-quadratic").checked);
+    formData.append("exclude_exact_self", document.getElementById("chk-exclude-self").checked);
+    formData.append("diversify_top_k", document.getElementById("chk-diversify").checked);
+    formData.append("simulate_unknown_species", document.getElementById("sim-unknown-species").value);
+
+    const res = await fetch("/api/search", { method: "POST", body: formData });
+    if (!res.ok) {
+      const err = await res.json();
+      alert("Lỗi truy vấn: " + (err.detail || "Không xác định"));
+      return;
+    }
+    const data = await res.json();
+    renderSearchResults(data);
+  }
+
+  function renderSearchResults(data) {
+    const qInfo = data.query_info;
+    const nov = data.novelty_analysis;
+    const fStats = data.filtering_stats;
+    const w = data.search_params.weights;
+
+    // 1. Thanh trạng thái nhận diện
+    const banner = document.getElementById("novelty-banner");
+    banner.className = "status-bar " + (nov.is_novel_species ? "status-novel" : "status-known");
+    document.getElementById("novelty-text").innerHTML =
+      `<b>Kết quả nhận diện:</b> ${nov.status_label} &nbsp;|&nbsp; <span class="mono">d_min = ${nov.nearest_non_identical_distance} (Ngưỡng loài mới = ${nov.youden_threshold})</span>`;
+    document.getElementById("latency-text").textContent =
+      `Ứng viên: ${fStats.candidates_evaluated}/${fStats.total_db_records} | Thời gian: ${fStats.total_latency_ms} ms`;
+
+    document.getElementById("active-weights-badge").textContent =
+      `Trọng số: w_color=${w.color} | w_shape=${w.shape} | w_texture=${w.texture}`;
+
+    // 2. Thẻ ảnh truy vấn
+    document.getElementById("query-preview-img").src = qInfo.preview_image_base64;
+    document.getElementById("q-title-name").textContent = qInfo.query_name;
+    document.getElementById("q-angle-text").textContent = `AR=${qInfo.aspect_ratio}`;
+    document.getElementById("q-meta-summary").innerHTML =
+      `MBB: [${qInfo.xlb}..${qInfo.xub}, ${qInfo.ylb}..${qInfo.yub}] (${qInfo.width}×${qInfo.height}px)<br/>` +
+      `Diện tích thân: ${qInfo.fg_area} px`;
+    document.getElementById("q-hex-summary").innerHTML =
+      `Grid64: 0x${qInfo.grid64_hex} (${qInfo.grid64_popcount}/64 bit 1)`;
+
+    // 3. Top-5 kết quả
+    const top5Div = document.getElementById("top5-container");
+    top5Div.innerHTML = "";
+    data.top_k_results.forEach(item => {
+      const gd = item.group_distances;
+      const card = document.createElement("div");
+      card.className = "fish-box";
+      card.innerHTML = `
+        <div>
+          <div class="fish-box-header">
+            <span class="badge ${item.rank === 1 ? 'badge-primary' : ''}">Hạng #${item.rank}</span>
+            <span class="mono" style="color:#1d4ed8; font-weight:700;">${item.similarity_pct.toFixed(1)}%</span>
+          </div>
+          <img src="/${item.file_path}" alt="${item.image_id}" />
+          <div class="fish-title">${item.species_vi}</div>
+          <div class="fish-meta mono">Mã: ${item.image_id} (${item.species.toUpperCase()})</div>
+        </div>
+        <div class="dist-list mono">
+          <div class="dist-row" style="font-weight:700; color:#111827;">
+            <span>D_total:</span><span>${item.total_distance.toFixed(4)}</span>
+          </div>
+          <div class="dist-row"><span>D_màu:</span><span>${gd.color.toFixed(3)}</span></div>
+          <div class="dist-row"><span>D_hình:</span><span>${gd.shape.toFixed(3)}</span></div>
+          <div class="dist-row"><span>D_kết_cấu:</span><span>${gd.texture.toFixed(3)}</span></div>
+          <div class="dist-row" style="color:#6b7280; font-size:10.5px;">
+            <span>Hamming 64b:</span><span>${item.hamming_64} bit</span>
+          </div>
+        </div>
+      `;
+      top5Div.appendChild(card);
+    });
+
+    // 4. Kết quả trung gian: Lưới 8x8
+    const inter = data.intermediate_features;
+    const gridDiv = document.getElementById("grid-8x8-visual");
+    gridDiv.innerHTML = "";
+    const contGrid = inter.s5_grids.continuous_8x8;
+    const binGrid = inter.s5_grids.binary_8x8_15pct;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const bit = binGrid[r][c];
+        const rho = contGrid[r][c];
+        const cell = document.createElement("div");
+        cell.className = "grid-cell " + (bit === 1 ? "bit-1" : "bit-0");
+        cell.title = `Ô (${r},${c}): Tỷ lệ thân cá = ${(rho*100).toFixed(1)}% -> Bit ${bit}`;
+        cell.textContent = bit;
+        gridDiv.appendChild(cell);
+      }
+    }
+    document.getElementById("grid-hex-detail").textContent =
+      `0x${qInfo.grid64_hex} (${qInfo.grid64_popcount}/64 ô bit 1)`;
+
+    // 5. Bảng S1 (8 chỉ số) & Tamura T3 (3 chỉ số)
+    const s1Body = document.querySelector("#s1-table tbody");
+    s1Body.innerHTML = "";
+    inter.s1_morphometrics.forEach(m => {
+      s1Body.innerHTML += `<tr><td>${m.label}</td><td class="mono">${m.value}</td><td class="mono">${m.z_value}</td></tr>`;
+    });
+    const t3 = inter.t3_tamura;
+    s1Body.innerHTML += `
+      <tr><td>Tamura Độ thô (F_crs)</td><td class="mono">${t3.coarseness}</td><td class="mono">${t3.coarseness_z !== undefined ? t3.coarseness_z : "-"}</td></tr>
+      <tr><td>Tamura Tương phản (F_con)</td><td class="mono">${t3.contrast}</td><td class="mono">${t3.contrast_z !== undefined ? t3.contrast_z : "-"}</td></tr>
+      <tr><td>Tamura Định hướng (F_dir)</td><td class="mono">${t3.directionality}</td><td class="mono">${t3.directionality_z !== undefined ? t3.directionality_z : "-"}</td></tr>
+    `;
+
+    // 6. Biểu đồ màu C1 & Bảng Lab C2
+    const c1 = inter.c1_distribution;
+    document.getElementById("c1-summary-text").innerHTML =
+      `Tỷ lệ Vô sắc (S &lt; 0.15): <b>${(c1.achromatic_ratio*100).toFixed(1)}%</b> &nbsp;|&nbsp; Hữu sắc (S &ge; 0.15): <b>${(c1.chromatic_ratio*100).toFixed(1)}%</b>`;
+    const c1Bars = document.getElementById("c1-hist-bars");
+    c1Bars.innerHTML = "";
+    const allC1Bins = [
+      ...c1.achromatic_6_bins.map((v, i) => ({ val: v, lbl: `X${i}`, color: "#64748b" })),
+      ...c1.hue_12_bins.map((v, i) => ({ val: v, lbl: `H${i+1}`, color: "#2563eb" }))
+    ];
+    const maxC1 = Math.max(0.01, ...allC1Bins.map(b => b.val));
+    allC1Bins.forEach(b => {
+      const hPct = Math.round((b.val / maxC1) * 100);
+      c1Bars.innerHTML += `
+        <div class="bar-col" title="${b.lbl}: ${(b.val*100).toFixed(2)}%">
+          <div class="bar-fill" style="height:${hPct}%; background:${b.color};"></div>
+          <div class="bar-lbl">${b.lbl}</div>
+        </div>
+      `;
+    });
+
+    const c2 = inter.c2_lab_moments;
+    document.querySelector("#c2-table tbody").innerHTML = `
+      <tr><td>Kênh L* (Độ sáng)</td><td class="mono">${c2.L_mean}</td><td class="mono">${c2.L_std}</td><td class="mono">${c2.L_skew}</td></tr>
+      <tr><td>Kênh a* (Lục - Đỏ)</td><td class="mono">${c2.a_mean}</td><td class="mono">${c2.a_std}</td><td class="mono">${c2.a_skew}</td></tr>
+      <tr><td>Kênh b* (Lam - Vàng)</td><td class="mono">${c2.b_mean}</td><td class="mono">${c2.b_std}</td><td class="mono">${c2.b_skew}</td></tr>
+    `;
+
+    // 7. Biên dạng S2
+    const s2 = inter.s2_profile;
+    const s2Bars = document.getElementById("s2-profile-bars");
+    s2Bars.innerHTML = "";
+    const maxS2 = Math.max(0.05, ...s2.dorsal_16, ...s2.ventral_16);
+    for (let i = 0; i < 16; i++) {
+      const dH = Math.round((s2.dorsal_16[i] / maxS2) * 100);
+      const vH = Math.round((s2.ventral_16[i] / maxS2) * 100);
+      s2Bars.innerHTML += `
+        <div class="bar-col" title="Lát ${i+1}: Lưng=${s2.dorsal_16[i]}, Bụng=${s2.ventral_16[i]}">
+          <div style="display:flex; gap:1px; width:100%; height:100%; align-items:flex-end;">
+            <div class="bar-fill" style="height:${dH}%; background:#1d4ed8;"></div>
+            <div class="bar-fill" style="height:${vH}%; background:#60a5fa;"></div>
+          </div>
+          <div class="bar-lbl">${i+1}</div>
+        </div>
+      `;
+    }
+
+    // 8. Bảng ma trận khoảng cách 12 thành phần
+    const matHead = document.querySelector("#comp-distance-matrix thead");
+    const matBody = document.querySelector("#comp-distance-matrix tbody");
+    let headHtml = `<tr><th>Mã</th><th>Thành phần đặc trưng</th><th>Số chiều</th><th>Vector đầu vào (3 giá trị đầu)</th>`;
+    data.top_k_results.forEach(r => {
+      headHtml += `<th class="mono">Hạng #${r.rank}: ${r.image_id}</th>`;
+    });
+    headHtml += `</tr>`;
+    matHead.innerHTML = headHtml;
+
+    matBody.innerHTML = "";
+    inter.component_summaries.forEach(cs => {
+      let rowHtml = `
+        <tr>
+          <td class="mono" style="font-weight:700;">${cs.code}</td>
+          <td>${cs.description}</td>
+          <td class="mono">${cs.dims}D</td>
+          <td class="mono" style="color:#4b5563;">[${cs.sample_raw_values.slice(0,3).join(", ")}, ...]</td>
+      `;
+      data.top_k_results.forEach(r => {
+        const cd = r.component_distances[cs.code];
+        rowHtml += `<td class="mono"><b>${cd.normalized_distance.toFixed(4)}</b> <span style="color:#6b7280; font-size:11px;">(${cd.raw_distance.toFixed(2)})</span></td>`;
+      });
+      rowHtml += `</tr>`;
+      matBody.innerHTML += rowHtml;
+    });
+  }
+
+  async function loadDbTable() {
+    const tbl = document.getElementById("db-table-select").value;
+    const sp = document.getElementById("db-species-select").value;
+    const url = `/api/db-table?table=${encodeURIComponent(tbl)}&limit=30` + (sp ? `&species=${encodeURIComponent(sp)}` : "");
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const thead = document.querySelector("#db-preview-table thead");
+    const tbody = document.querySelector("#db-preview-table tbody");
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+    if (!data.rows || data.rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10">Không có bản ghi nào.</td></tr>`;
+      return;
+    }
+    const cols = Object.keys(data.rows[0]);
+    thead.innerHTML = `<tr>` + cols.map(c => `<th>${c}</th>`).join("") + `</tr>`;
+    data.rows.forEach(r => {
+      tbody.innerHTML += `<tr>` + cols.map(c => `<td class="mono">${r[c] !== null ? r[c] : "NULL"}</td>`).join("") + `</tr>`;
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", initApp);
+</script>
+</body>
+</html>
