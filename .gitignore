@@ -28,7 +28,7 @@ env/
 /dataset_gold_v3/
 /2-v2/
 /data/
-/docs/
+/local-docs/
 /.agents/
 /verify_dataset_integrity.py
 
